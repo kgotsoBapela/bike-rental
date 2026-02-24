@@ -1,61 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabase";
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-const Icon = ({ name, size = 18 }) => {
-  const icons = {
-    bike: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1-1h-1"/><path d="M18.5 17.5L14 6"/><path d="M5.5 17.5 L9 10h7l2 7.5"/><path d="M9 10l-2 3"/></svg>,
-    calendar: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    wrench: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
-    dashboard: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-    plus: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-    edit: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-    trash: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>,
-    close: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-    chevronLeft: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15,18 9,12 15,6"/></svg>,
-    chevronRight: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9,18 15,12 9,6"/></svg>,
-  };
-  return icons[name] || null;
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function generateId(prefix) { return prefix + Date.now() + Math.random().toString(36).slice(2, 6); }
+function genId(p) { return p + Date.now() + Math.random().toString(36).slice(2, 5); }
 
 const statusColors = {
-  available: { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" },
-  rented:    { bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
-  maintenance:{ bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  completed: { bg: "#F1F5F9", text: "#475569", dot: "#94A3B8" },
-  active:    { bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
-  upcoming:  { bg: "#F3E8FF", text: "#6B21A8", dot: "#A855F7" },
-  scheduled: { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  good:      { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" },
-  fair:      { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  worn:      { bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
+  available:   { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" },
+  rented:      { bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
+  maintenance: { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
+  completed:   { bg: "#F1F5F9", text: "#475569", dot: "#94A3B8" },
+  active:      { bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
+  upcoming:    { bg: "#F3E8FF", text: "#6B21A8", dot: "#A855F7" },
+  scheduled:   { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
+  good:        { bg: "#DCFCE7", text: "#166534", dot: "#22C55E" },
+  fair:        { bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
+  worn:        { bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
 };
 
 const Badge = ({ status }) => {
   const c = statusColors[status] || { bg: "#F1F5F9", text: "#475569", dot: "#94A3B8" };
   return (
     <span style={{ background: c.bg, color: c.text, padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, display: "inline-block" }} />
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot }} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 };
 
-const Modal = ({ title, onClose, children }) => (
-  <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-    <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #F1F5F9" }}>
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0F172A" }}>{title}</h3>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 4 }}><Icon name="close" size={20} /></button>
-      </div>
-      <div style={{ padding: 24 }}>{children}</div>
-    </div>
-  </div>
-);
-
+const inputStyle = { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: 8, fontSize: 14, color: "#1E293B", outline: "none", boxSizing: "border-box", background: "#fff" };
+const selectStyle = { ...inputStyle, cursor: "pointer" };
 const Field = ({ label, children }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{label}</label>
@@ -63,107 +36,159 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-const inputStyle = { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: 8, fontSize: 14, color: "#1E293B", outline: "none", boxSizing: "border-box", background: "#fff" };
-const selectStyle = { ...inputStyle, cursor: "pointer" };
+const Modal = ({ title, onClose, children, wide }) => (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: wide ? 720 : 560, maxHeight: "92vh", overflow: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.3)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #F1F5F9", position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0F172A" }}>{title}</h3>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: 20, lineHeight: 1 }}>✕</button>
+      </div>
+      <div style={{ padding: 24 }}>{children}</div>
+    </div>
+  </div>
+);
 
-const btnPrimary = { display: "flex", alignItems: "center", gap: 6, background: "#1E40AF", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13 };
-const btnSecondary = { flex: 1, padding: "10px", background: "#F1F5F9", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer", color: "#374151" };
-const btnSave = { flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" };
+const Btn = ({ onClick, children, variant = "primary", disabled, small }) => {
+  const styles = {
+    primary:   { background: "#1E40AF", color: "#fff", border: "none" },
+    secondary: { background: "#F1F5F9", color: "#374151", border: "none" },
+    danger:    { background: "#FEE2E2", color: "#DC2626", border: "none" },
+    success:   { background: "#DCFCE7", color: "#166534", border: "none" },
+    ghost:     { background: "transparent", color: "#64748B", border: "1.5px solid #E2E8F0" },
+  };
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{ ...styles[variant], padding: small ? "6px 12px" : "9px 18px", borderRadius: 9, fontWeight: 600, fontSize: small ? 12 : 13, cursor: disabled ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 6, opacity: disabled ? 0.6 : 1, whiteSpace: "nowrap" }}>
+      {children}
+    </button>
+  );
+};
 
-// ─── APP ──────────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const icons = {
+  dashboard: "⊞", bike: "🚲", calendar: "📅", wrench: "🔧", users: "👥",
+  plus: "+", edit: "✏️", trash: "🗑", chevL: "‹", chevR: "›", lock: "🔒", logout: "→",
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOGIN PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError("");
+    const { data, error: err } = await supabase.from("app_users").select("*").eq("email", email.trim().toLowerCase()).single();
+    if (err || !data) { setError("Invalid email or password."); setLoading(false); return; }
+    if (data.password_hash !== `hash:${password}`) { setError("Invalid email or password."); setLoading(false); return; }
+    onLogin(data);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F172A 0%, #1E3A5F 60%, #0F172A 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 400, padding: 16 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ fontSize: 52, marginBottom: 12 }}>🚲</div>
+          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 900, margin: 0, letterSpacing: "-1px" }}>BikeRent</h1>
+          <p style={{ color: "#64748B", margin: "6px 0 0", fontSize: 14 }}>Admin Management System</p>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 20, padding: 32, boxShadow: "0 32px 80px rgba(0,0,0,0.4)" }}>
+          <h2 style={{ margin: "0 0 24px", fontSize: 18, fontWeight: 700, color: "#0F172A" }}>Sign In</h2>
+          <form onSubmit={handleLogin}>
+            <Field label="Email">
+              <input style={inputStyle} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@bikerent.com" required />
+            </Field>
+            <Field label="Password">
+              <input style={inputStyle} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+            </Field>
+            {error && <div style={{ background: "#FEE2E2", color: "#DC2626", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
+            <button type="submit" disabled={loading} style={{ width: "100%", padding: "12px", background: "#1E40AF", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", marginTop: 4 }}>
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+          <div style={{ marginTop: 20, padding: "12px 14px", background: "#F8FAFC", borderRadius: 10, fontSize: 12, color: "#64748B" }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: "#374151" }}>Demo accounts:</div>
+            <div>Admin: admin@bikerent.com / admin123</div>
+            <div>Viewer: viewer@bikerent.com / viewer123</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// APP SHELL
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
+  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem("br_user")); } catch { return null; } });
   const [tab, setTab] = useState("dashboard");
   const [bikes, setBikes] = useState([]);
   const [rentals, setRentals] = useState([]);
   const [maintenance, setMaintenance] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [appUsers, setAppUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [modal, setModal] = useState(null);
+
+  const isAdmin = user?.role === "admin";
+
+  const handleLogin = (u) => { localStorage.setItem("br_user", JSON.stringify(u)); setUser(u); };
+  const handleLogout = () => { localStorage.removeItem("br_user"); setUser(null); };
 
   const fetchAll = async () => {
     setLoading(true);
-    try {
-      const [{ data: b }, { data: c }, { data: r }, { data: m }] = await Promise.all([
-        supabase.from("bikes").select("*").order("created_at"),
-        supabase.from("components").select("*"),
-        supabase.from("rentals").select("*").order("created_at", { ascending: false }),
-        supabase.from("maintenance").select("*").order("scheduled_date"),
-      ]);
-      // Attach components to bikes
-      const bikesWithComps = (b || []).map(bike => ({
-        ...bike,
-        hourlyRate: bike.hourly_rate,
-        dailyRate: bike.daily_rate,
-        components: (c || []).filter(comp => comp.bike_id === bike.id).map(comp => ({
-          ...comp, lastReplaced: comp.last_replaced
-        }))
-      }));
-      // Normalize rentals
-      const normalizedRentals = (r || []).map(rental => ({
-        ...rental,
-        bikeId: rental.bike_id,
-        customerName: rental.customer_name,
-        customerEmail: rental.customer_email,
-        customerPhone: rental.customer_phone,
-        startDate: rental.start_date,
-        endDate: rental.end_date,
-        type: rental.rental_type,
-      }));
-      // Normalize maintenance
-      const normalizedMaint = (m || []).map(item => ({
-        ...item,
-        bikeId: item.bike_id,
-        scheduledDate: item.scheduled_date,
-        technicianName: item.technician_name,
-      }));
-      setBikes(bikesWithComps);
-      setRentals(normalizedRentals);
-      setMaintenance(normalizedMaint);
-    } catch (e) {
-      setError("Failed to connect to database.");
-    }
+    const [{ data: b }, { data: c }, { data: r }, { data: m }, { data: cu }, { data: au }] = await Promise.all([
+      supabase.from("bikes").select("*").order("created_at"),
+      supabase.from("components").select("*"),
+      supabase.from("rentals").select("*").order("created_at", { ascending: false }),
+      supabase.from("maintenance").select("*").order("scheduled_date"),
+      supabase.from("customers").select("*").order("name"),
+      supabase.from("app_users").select("id,email,name,role,created_at").order("created_at"),
+    ]);
+    const bikesWithComps = (b || []).map(bike => ({ ...bike, components: (c || []).filter(x => x.bike_id === bike.id) }));
+    setBikes(bikesWithComps);
+    setRentals(r || []);
+    setMaintenance(m || []);
+    setCustomers(cu || []);
+    setAppUsers(au || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { if (user) fetchAll(); }, [user]);
 
+  if (!user) return <LoginPage onLogin={handleLogin} />;
   if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>🚲</div>
-        <p style={{ color: "#64748B", fontFamily: "monospace", fontSize: 15 }}>Connecting to database...</p>
-      </div>
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
-      <div style={{ textAlign: "center", background: "#fff", padding: 40, borderRadius: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
-        <p style={{ color: "#DC2626", fontWeight: 700, fontSize: 16 }}>{error}</p>
-        <p style={{ color: "#64748B", fontSize: 13 }}>Check your Supabase environment variables.</p>
-        <button onClick={fetchAll} style={{ ...btnPrimary, margin: "16px auto 0", justifyContent: "center" }}>Retry</button>
-      </div>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: 48 }}>🚲</div><p style={{ color: "#64748B", marginTop: 12 }}>Loading...</p></div>
     </div>
   );
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-    { id: "bikes", label: "Bikes", icon: "bike" },
-    { id: "rentals", label: "Rentals", icon: "calendar" },
-    { id: "maintenance", label: "Maintenance", icon: "wrench" },
-    { id: "calendar", label: "Calendar", icon: "calendar" },
+    { id: "dashboard", label: "Dashboard", icon: "⊞" },
+    { id: "bikes", label: "Bikes", icon: "🚲" },
+    { id: "rentals", label: "Rentals", icon: "📋" },
+    { id: "maintenance", label: "Maintenance", icon: "🔧" },
+    { id: "calendar", label: "Calendar", icon: "📅" },
+    { id: "customers", label: "Customers", icon: "👥" },
   ];
 
+  const props = { bikes, rentals, maintenance, customers, appUsers, fetchAll, modal, setModal, isAdmin };
+
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Segoe UI', system-ui, sans-serif", display: "flex" }}>
+    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#F8FAFC" }}>
       {/* Sidebar */}
-      <aside style={{ width: 220, background: "#0F172A", flexShrink: 0, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <div style={{ padding: "28px 20px 20px" }}>
+      <aside style={{ width: 225, background: "#0F172A", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div style={{ padding: "26px 20px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 26 }}>🚲</span>
             <div>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>BikeRent</div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>BikeRent</div>
               <div style={{ color: "#475569", fontSize: 11 }}>Admin Panel</div>
             </div>
           </div>
@@ -172,62 +197,74 @@ export default function App() {
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", marginBottom: 2, textAlign: "left", fontWeight: 600, fontSize: 13, background: tab === t.id ? "#1E40AF" : "transparent", color: tab === t.id ? "#fff" : "#94A3B8" }}>
-              <Icon name={t.icon} size={16} />{t.label}
+              <span style={{ fontSize: 15 }}>{t.icon}</span>{t.label}
             </button>
           ))}
         </nav>
-        <div style={{ padding: "16px 20px", borderTop: "1px solid #1E293B", color: "#475569", fontSize: 11 }}>
-          Connected to Supabase ✓
+        <div style={{ padding: "14px 20px", borderTop: "1px solid #1E293B" }}>
+          <div style={{ color: "#94A3B8", fontSize: 12, marginBottom: 2 }}>{user.name}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Badge status={user.role === "admin" ? "active" : "scheduled"} />
+            <button onClick={handleLogout} style={{ background: "none", border: "none", color: "#64748B", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Sign out</button>
+          </div>
         </div>
       </aside>
 
       {/* Main */}
       <main style={{ flex: 1, overflow: "auto" }}>
-        {tab === "dashboard"   && <Dashboard bikes={bikes} rentals={rentals} maintenance={maintenance} />}
-        {tab === "bikes"       && <Bikes bikes={bikes} fetchAll={fetchAll} modal={modal} setModal={setModal} />}
-        {tab === "rentals"     && <Rentals rentals={rentals} bikes={bikes} fetchAll={fetchAll} modal={modal} setModal={setModal} />}
-        {tab === "maintenance" && <MaintenanceTab maintenance={maintenance} bikes={bikes} fetchAll={fetchAll} modal={modal} setModal={setModal} />}
-        {tab === "calendar"    && <CalendarView rentals={rentals} bikes={bikes} />}
+        {!isAdmin && (
+          <div style={{ background: "#FEF3C7", borderBottom: "1px solid #FDE68A", padding: "8px 24px", fontSize: 13, color: "#92400E", display: "flex", alignItems: "center", gap: 8 }}>
+            🔒 You're in <strong>read-only</strong> mode. Contact an admin to make changes.
+          </div>
+        )}
+        {tab === "dashboard"   && <Dashboard {...props} />}
+        {tab === "bikes"       && <Bikes {...props} />}
+        {tab === "rentals"     && <Rentals {...props} />}
+        {tab === "maintenance" && <MaintenanceTab {...props} />}
+        {tab === "calendar"    && <CalendarView {...props} />}
+        {tab === "customers"   && <CustomersTab {...props} />}
       </main>
     </div>
   );
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ bikes, rentals, maintenance }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+function Dashboard({ bikes, rentals, maintenance, customers }) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
 
-  const totalRevenue = rentals.filter(r => r.status === "completed").reduce((s, r) => s + Number(r.amount), 0);
+  const yearRentals = rentals.filter(r => new Date(r.start_date).getFullYear() === currentYear);
   const activeRentals = rentals.filter(r => r.status === "active").length;
   const availableBikes = bikes.filter(b => b.status === "available").length;
   const pendingMaint = maintenance.filter(m => m.status === "scheduled").length;
 
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const monthlyData = months.map((m, i) => ({
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthlyData = monthNames.map((m, i) => ({
     month: m,
-    count: rentals.filter(r => { const d = new Date(r.startDate); return d.getFullYear() === currentYear && d.getMonth() === i; }).length,
+    count: rentals.filter(r => { const d = new Date(r.start_date); return d.getFullYear() === currentYear && d.getMonth() === i; }).length,
   }));
   const maxCount = Math.max(...monthlyData.map(m => m.count), 1);
 
   const stats = [
-    { label: "Total Revenue", value: `$${totalRevenue.toLocaleString()}`, color: "#22C55E", icon: "💰", sub: "Completed rentals" },
-    { label: "Active Rentals", value: activeRentals, color: "#3B82F6", icon: "🚴", sub: "Bikes out now" },
-    { label: "Available Bikes", value: availableBikes, color: "#8B5CF6", icon: "✅", sub: `of ${bikes.length} total` },
-    { label: "Pending Maintenance", value: pendingMaint, color: "#F59E0B", icon: "🔧", sub: "Scheduled" },
+    { label: "Total Rentals This Year", value: yearRentals.length, color: "#22C55E", icon: "📦", sub: `${currentYear} total` },
+    { label: "Active Now", value: activeRentals, color: "#3B82F6", icon: "🚴", sub: "Bikes currently out" },
+    { label: "Available Bikes", value: availableBikes, color: "#8B5CF6", icon: "✅", sub: `of ${bikes.length} fleet` },
+    { label: "Pending Maintenance", value: pendingMaint, color: "#F59E0B", icon: "🔧", sub: "Needs attention" },
   ];
 
   return (
     <div style={{ padding: 32 }}>
-      <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800, color: "#0F172A" }}>Admin Dashboard</h1>
-      <p style={{ margin: "0 0 28px", color: "#64748B", fontSize: 14 }}>Welcome back. Here's what's happening today.</p>
+      <h1 style={{ margin: "0 0 4px", fontSize: 24, fontWeight: 800, color: "#0F172A" }}>Dashboard</h1>
+      <p style={{ margin: "0 0 28px", color: "#64748B", fontSize: 14 }}>Fleet overview for {currentYear}</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
         {stats.map(s => (
           <div key={s.label} style={{ background: "#fff", borderRadius: 14, padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: `4px solid ${s.color}` }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#0F172A", lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 30, fontWeight: 800, color: "#0F172A", lineHeight: 1 }}>{s.value}</div>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#374151", marginTop: 4 }}>{s.label}</div>
             <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>{s.sub}</div>
           </div>
@@ -236,19 +273,17 @@ function Dashboard({ bikes, rentals, maintenance }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
         <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#0F172A" }}>Bookings This Year — {currentYear}</h3>
-          <p style={{ margin: "0 0 20px", fontSize: 12, color: "#94A3B8" }}>Monthly overview</p>
+          <h3 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "#0F172A" }}>Monthly Bookings — {currentYear}</h3>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 130 }}>
             {monthlyData.map((d, i) => (
               <div key={d.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                 <div style={{ fontSize: 10, color: "#374151", fontWeight: 600 }}>{d.count || ""}</div>
-                <div style={{ width: "100%", background: i === currentMonth ? "#1E40AF" : "#DBEAFE", borderRadius: "4px 4px 0 0", height: `${(d.count / maxCount) * 100 + 4}px`, minHeight: 4 }} />
-                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 500 }}>{d.month}</div>
+                <div style={{ width: "100%", background: i === currentMonth ? "#1E40AF" : "#DBEAFE", borderRadius: "4px 4px 0 0", height: `${Math.max((d.count / maxCount) * 110, 4)}px` }} />
+                <div style={{ fontSize: 10, color: "#94A3B8" }}>{d.month}</div>
               </div>
             ))}
           </div>
         </div>
-
         <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#0F172A" }}>Fleet Status</h3>
           {["available","rented","maintenance"].map(status => {
@@ -258,8 +293,8 @@ function Dashboard({ bikes, rentals, maintenance }) {
             return (
               <div key={status} style={{ marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, color: "#374151", fontWeight: 600, textTransform: "capitalize" }}>{status}</span>
-                  <span style={{ fontSize: 13, color: "#64748B" }}>{count} / {bikes.length}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", textTransform: "capitalize" }}>{status}</span>
+                  <span style={{ fontSize: 13, color: "#64748B" }}>{count}/{bikes.length}</span>
                 </div>
                 <div style={{ background: "#F1F5F9", borderRadius: 6, height: 8 }}>
                   <div style={{ background: c.dot, height: 8, borderRadius: 6, width: `${pct}%` }} />
@@ -267,63 +302,58 @@ function Dashboard({ bikes, rentals, maintenance }) {
               </div>
             );
           })}
-          <h4 style={{ margin: "20px 0 10px", fontSize: 13, color: "#64748B" }}>Recent Rentals</h4>
-          {rentals.slice(0, 3).map(r => {
-            const bike = bikes.find(b => b.id === r.bikeId || b.id === r.bike_id);
-            return (
-              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0F172A" }}>{r.customerName || r.customer_name}</div>
-                  <div style={{ fontSize: 11, color: "#94A3B8" }}>{bike?.name}</div>
-                </div>
-                <Badge status={r.status} />
-              </div>
-            );
-          })}
+          <div style={{ marginTop: 20, padding: "12px", background: "#F8FAFC", borderRadius: 10 }}>
+            <div style={{ fontSize: 12, color: "#94A3B8", marginBottom: 6 }}>Total Customers</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: "#0F172A" }}>{customers.length}</div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── BIKES ────────────────────────────────────────────────────────────────────
-function Bikes({ bikes, fetchAll, modal, setModal }) {
-  const emptyBike = { name: "", type: "City", color: "#3B82F6", status: "available", hourlyRate: 10, dailyRate: 40, components: [] };
+// ═══════════════════════════════════════════════════════════════════════════════
+// BIKES
+// ═══════════════════════════════════════════════════════════════════════════════
+function Bikes({ bikes, rentals, customers, fetchAll, modal, setModal, isAdmin }) {
+  const emptyBike = { name: "", type: "City", color: "#3B82F6", status: "available", image_url: "", components: [] };
   const [form, setForm] = useState(emptyBike);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const openAdd = () => { setForm(emptyBike); setEditId(null); setModal("bike"); };
-  const openEdit = (bike) => { setForm({ ...bike, hourlyRate: bike.hourly_rate || bike.hourlyRate, dailyRate: bike.daily_rate || bike.dailyRate }); setEditId(bike.id); setModal("bike"); };
+  const openEdit = (b) => { setForm({ ...b }); setEditId(b.id); setModal("bike"); };
   const closeModal = () => { setModal(null); setEditId(null); };
 
   const saveBike = async () => {
     setSaving(true);
-    const bikeData = { name: form.name, type: form.type, color: form.color, status: form.status, hourly_rate: form.hourlyRate, daily_rate: form.dailyRate };
+    const data = { name: form.name, type: form.type, color: form.color, status: form.status, image_url: form.image_url || "" };
     let bikeId = editId;
     if (editId) {
-      await supabase.from("bikes").update(bikeData).eq("id", editId);
+      await supabase.from("bikes").update(data).eq("id", editId);
       await supabase.from("components").delete().eq("bike_id", editId);
     } else {
-      bikeId = generateId("b");
-      await supabase.from("bikes").insert({ id: bikeId, ...bikeData });
+      bikeId = genId("b");
+      await supabase.from("bikes").insert({ id: bikeId, ...data });
     }
     if (form.components?.length) {
-      const comps = form.components.map((c, i) => ({ id: generateId("c"), bike_id: bikeId, name: c.name, condition: c.condition, last_replaced: c.lastReplaced || c.last_replaced }));
-      await supabase.from("components").insert(comps);
+      await supabase.from("components").insert(form.components.map(c => ({ id: genId("c"), bike_id: bikeId, name: c.name, condition: c.condition, last_replaced: c.last_replaced || null })));
     }
     await fetchAll(); closeModal(); setSaving(false);
   };
 
-  const deleteBike = async (id) => {
-    await supabase.from("components").delete().eq("bike_id", id);
-    await supabase.from("bikes").delete().eq("id", id);
-    await fetchAll();
-  };
+  const deleteBike = async (id) => { await supabase.from("bikes").delete().eq("id", id); await fetchAll(); };
+  const addComp = () => setForm(f => ({ ...f, components: [...(f.components||[]), { name: "", condition: "good", last_replaced: new Date().toISOString().split("T")[0] }] }));
+  const updComp = (i, k, v) => { const c = [...form.components]; c[i] = { ...c[i], [k]: v }; setForm(f => ({ ...f, components: c })); };
+  const remComp = (i) => setForm(f => ({ ...f, components: f.components.filter((_, x) => x !== i) }));
 
-  const addComponent = () => setForm(f => ({ ...f, components: [...(f.components||[]), { name: "", condition: "good", lastReplaced: new Date().toISOString().split("T")[0] }] }));
-  const updateComp = (i, field, val) => { const c = [...form.components]; c[i] = { ...c[i], [field]: val }; setForm(f => ({ ...f, components: c })); };
-  const removeComp = (i) => setForm(f => ({ ...f, components: f.components.filter((_, idx) => idx !== i) }));
+  const getBikeRentals = (bikeId) => {
+    const now = new Date().toISOString().split("T")[0];
+    const all = rentals.filter(r => r.bike_id === bikeId);
+    const past = all.filter(r => r.end_date < now).sort((a,b) => b.end_date.localeCompare(a.end_date)).slice(0,1);
+    const upcoming = all.filter(r => r.start_date >= now).sort((a,b) => a.start_date.localeCompare(b.start_date)).slice(0,2);
+    return { past, upcoming };
+  };
 
   return (
     <div style={{ padding: 32 }}>
@@ -332,53 +362,84 @@ function Bikes({ bikes, fetchAll, modal, setModal }) {
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>Bikes</h1>
           <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{bikes.length} bikes in fleet</p>
         </div>
-        <button onClick={openAdd} style={btnPrimary}><Icon name="plus" size={16} /> Add Bike</button>
+        {isAdmin && <Btn onClick={openAdd}>+ Add Bike</Btn>}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-        {bikes.map(bike => (
-          <div key={bike.id} style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F1F5F9" }}>
-            <div style={{ height: 6, background: bike.color }} />
-            <div style={{ padding: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+        {bikes.map(bike => {
+          const { past, upcoming } = getBikeRentals(bike.id);
+          return (
+            <div key={bike.id} style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", border: "1px solid #F1F5F9", display: "flex", flexDirection: "column" }}>
+              {/* Bike image */}
+              <div style={{ height: 160, background: `linear-gradient(135deg, ${bike.color}22, ${bike.color}44)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+                {bike.image_url ? (
+                  <img src={bike.image_url} alt={bike.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+                ) : (
+                  <div style={{ fontSize: 64, opacity: 0.4 }}>🚲</div>
+                )}
+                <div style={{ position: "absolute", top: 10, right: 10 }}><Badge status={bike.status} /></div>
+                <div style={{ position: "absolute", top: 10, left: 10, background: bike.color, width: 14, height: 14, borderRadius: "50%", border: "2px solid white" }} />
+              </div>
+
+              <div style={{ padding: "16px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A" }}>{bike.name}</div>
                   <div style={{ fontSize: 12, color: "#94A3B8" }}>{bike.type}</div>
                 </div>
-                <Badge status={bike.status} />
-              </div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1E40AF" }}>${bike.hourly_rate || bike.hourlyRate}</div>
-                  <div style={{ fontSize: 10, color: "#94A3B8" }}>per hour</div>
+
+                {/* Components */}
+                {(bike.components||[]).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px" }}>Components</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {bike.components.map((c, i) => (
+                        <span key={i} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: statusColors[c.condition]?.bg, color: statusColors[c.condition]?.text }}>{c.name}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rental history */}
+                <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 10 }}>
+                  {past.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Last Booking</div>
+                      {past.map(r => {
+                        const cust = customers.find(c => c.id === r.customer_id);
+                        return <RentalChip key={r.id} r={r} cust={cust} />;
+                      })}
+                    </div>
+                  )}
+                  {upcoming.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Upcoming ({upcoming.length})</div>
+                      {upcoming.map(r => {
+                        const cust = customers.find(c => c.id === r.customer_id);
+                        return <RentalChip key={r.id} r={r} cust={cust} />;
+                      })}
+                    </div>
+                  )}
+                  {past.length === 0 && upcoming.length === 0 && (
+                    <div style={{ fontSize: 12, color: "#CBD5E1", textAlign: "center", padding: "8px 0" }}>No booking history</div>
+                  )}
                 </div>
-                <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "8px 14px", textAlign: "center" }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1E40AF" }}>${bike.daily_rate || bike.dailyRate}</div>
-                  <div style={{ fontSize: 10, color: "#94A3B8" }}>per day</div>
-                </div>
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Components ({(bike.components||[]).length})</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {(bike.components||[]).map((c, i) => (
-                    <span key={i} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: statusColors[c.condition]?.bg || "#F1F5F9", color: statusColors[c.condition]?.text || "#374151" }}>{c.name}</span>
-                  ))}
-                  {(bike.components||[]).length === 0 && <span style={{ fontSize: 11, color: "#94A3B8" }}>No components tracked</span>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => openEdit(bike)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: 8, background: "#F1F5F9", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#374151" }}><Icon name="edit" size={14} /> Edit</button>
-                <button onClick={() => deleteBike(bike.id)} style={{ padding: "8px 12px", background: "#FEE2E2", border: "none", borderRadius: 8, cursor: "pointer", color: "#DC2626" }}><Icon name="trash" size={14} /></button>
+
+                {isAdmin && (
+                  <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                    <Btn onClick={() => openEdit(bike)} variant="secondary" small>✏️ Edit</Btn>
+                    <Btn onClick={() => deleteBike(bike.id)} variant="danger" small>🗑</Btn>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {modal === "bike" && (
-        <Modal title={editId ? "Edit Bike" : "Add Bike"} onClose={closeModal}>
-          <Field label="Bike Name"><input style={inputStyle} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Trek FX 3" /></Field>
+      {modal === "bike" && isAdmin && (
+        <Modal title={editId ? "Edit Bike" : "Add Bike"} onClose={closeModal} wide>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Bike Name"><input style={inputStyle} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Trek FX 3" /></Field>
             <Field label="Type">
               <select style={selectStyle} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                 {["City","Mountain","Road","Hybrid","Fitness","Electric"].map(t => <option key={t}>{t}</option>)}
@@ -389,34 +450,38 @@ function Bikes({ bikes, fetchAll, modal, setModal }) {
                 {["available","rented","maintenance"].map(s => <option key={s}>{s}</option>)}
               </select>
             </Field>
-            <Field label="Hourly Rate ($)"><input type="number" style={inputStyle} value={form.hourlyRate} onChange={e => setForm(f => ({ ...f, hourlyRate: +e.target.value }))} /></Field>
-            <Field label="Daily Rate ($)"><input type="number" style={inputStyle} value={form.dailyRate} onChange={e => setForm(f => ({ ...f, dailyRate: +e.target.value }))} /></Field>
+            <Field label="Accent Color">
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} style={{ width: 42, height: 38, borderRadius: 8, border: "1.5px solid #E2E8F0", cursor: "pointer" }} />
+                <span style={{ fontSize: 13, color: "#64748B" }}>{form.color}</span>
+              </div>
+            </Field>
           </div>
-          <Field label="Accent Color">
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} style={{ width: 42, height: 36, border: "1.5px solid #E2E8F0", borderRadius: 8, cursor: "pointer", padding: 2 }} />
-              <span style={{ fontSize: 13, color: "#64748B" }}>{form.color}</span>
-            </div>
+          <Field label="Image URL (paste a direct image link)">
+            <input style={inputStyle} value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://example.com/bike.jpg" />
+            {form.image_url && <img src={form.image_url} alt="preview" style={{ marginTop: 8, height: 80, borderRadius: 8, objectFit: "cover" }} onError={e => e.target.style.display="none"} />}
           </Field>
+
           <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <label style={{ fontWeight: 700, fontSize: 13, color: "#374151" }}>Components</label>
-              <button onClick={addComponent} style={{ fontSize: 12, color: "#1E40AF", background: "#EFF6FF", border: "none", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>+ Add</button>
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#374151" }}>Components</span>
+              <Btn onClick={addComp} variant="ghost" small>+ Add Component</Btn>
             </div>
             {(form.components||[]).map((c, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
-                <input style={inputStyle} value={c.name} onChange={e => updateComp(i, "name", e.target.value)} placeholder="Name" />
-                <select style={selectStyle} value={c.condition} onChange={e => updateComp(i, "condition", e.target.value)}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, marginBottom: 8 }}>
+                <input style={inputStyle} value={c.name} onChange={e => updComp(i,"name",e.target.value)} placeholder="Name" />
+                <select style={selectStyle} value={c.condition} onChange={e => updComp(i,"condition",e.target.value)}>
                   {["good","fair","worn"].map(s => <option key={s}>{s}</option>)}
                 </select>
-                <input type="date" style={inputStyle} value={c.lastReplaced || c.last_replaced || ""} onChange={e => updateComp(i, "lastReplaced", e.target.value)} />
-                <button onClick={() => removeComp(i)} style={{ background: "#FEE2E2", border: "none", borderRadius: 6, padding: "8px 10px", cursor: "pointer", color: "#DC2626" }}><Icon name="trash" size={12} /></button>
+                <input type="date" style={inputStyle} value={c.last_replaced||""} onChange={e => updComp(i,"last_replaced",e.target.value)} />
+                <Btn onClick={() => remComp(i)} variant="danger" small>🗑</Btn>
               </div>
             ))}
           </div>
+
           <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <button onClick={closeModal} style={btnSecondary}>Cancel</button>
-            <button onClick={saveBike} disabled={saving} style={btnSave}>{saving ? "Saving..." : "Save Bike"}</button>
+            <Btn onClick={closeModal} variant="secondary">Cancel</Btn>
+            <button onClick={saveBike} disabled={saving} style={{ flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" }}>{saving ? "Saving..." : "Save Bike"}</button>
           </div>
         </Modal>
       )}
@@ -424,83 +489,111 @@ function Bikes({ bikes, fetchAll, modal, setModal }) {
   );
 }
 
-// ─── RENTALS ──────────────────────────────────────────────────────────────────
-function Rentals({ rentals, bikes, fetchAll, modal, setModal }) {
-  const emptyRental = { bikeId: "", customerName: "", customerEmail: "", customerPhone: "", startDate: "", endDate: "", type: "daily", amount: 0, status: "upcoming", notes: "" };
-  const [form, setForm] = useState(emptyRental);
+function RentalChip({ r, cust }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8FAFC", borderRadius: 8, padding: "5px 10px", marginBottom: 4, fontSize: 12 }}>
+      <span style={{ fontWeight: 600, color: "#374151" }}>{cust?.name || "Unknown"}</span>
+      <span style={{ color: "#94A3B8" }}>{r.start_date} → {r.end_date}</span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENTALS
+// ═══════════════════════════════════════════════════════════════════════════════
+function Rentals({ rentals, bikes, customers, fetchAll, modal, setModal, isAdmin }) {
+  const emptyR = { bike_id: "", customer_id: "", start_date: "", end_date: "", rental_type: "daily", status: "upcoming", notes: "" };
+  const [form, setForm] = useState(emptyR);
   const [editId, setEditId] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const openAdd = () => { setForm(emptyRental); setEditId(null); setModal("rental"); };
-  const openEdit = (r) => { setForm({ ...r, bikeId: r.bike_id || r.bikeId, customerName: r.customer_name || r.customerName, customerEmail: r.customer_email || r.customerEmail, customerPhone: r.customer_phone || r.customerPhone, startDate: r.start_date || r.startDate, endDate: r.end_date || r.endDate, type: r.rental_type || r.type }); setEditId(r.id); setModal("rental"); };
+  const openAdd = () => { setForm(emptyR); setEditId(null); setModal("rental"); };
+  const openEdit = (r) => { setForm({ ...r }); setEditId(r.id); setModal("rental"); };
   const closeModal = () => { setModal(null); setEditId(null); };
 
   const saveRental = async () => {
     setSaving(true);
-    const data = { bike_id: form.bikeId, customer_name: form.customerName, customer_email: form.customerEmail, customer_phone: form.customerPhone, start_date: form.startDate, end_date: form.endDate, rental_type: form.type, amount: form.amount, status: form.status, notes: form.notes };
-    if (editId) await supabase.from("rentals").update(data).eq("id", editId);
-    else await supabase.from("rentals").insert({ id: generateId("r"), ...data });
+    if (editId) await supabase.from("rentals").update(form).eq("id", editId);
+    else await supabase.from("rentals").insert({ id: genId("r"), ...form });
     await fetchAll(); closeModal(); setSaving(false);
   };
 
-  const deleteRental = async (id) => { await supabase.from("rentals").delete().eq("id", id); await fetchAll(); };
+  const del = async (id) => { await supabase.from("rentals").delete().eq("id", id); await fetchAll(); };
 
-  const filtered = filter === "all" ? rentals : rentals.filter(r => r.status === filter);
+  const filtered = useMemo(() => {
+    let list = filter === "all" ? rentals : rentals.filter(r => r.status === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(r => {
+        const cust = customers.find(c => c.id === r.customer_id);
+        return cust?.name?.toLowerCase().includes(q) || cust?.email?.toLowerCase().includes(q);
+      });
+    }
+    return list;
+  }, [rentals, filter, search, customers]);
 
   return (
     <div style={{ padding: 32 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>Rentals</h1>
-          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{rentals.length} total rentals</p>
+          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{rentals.length} total</p>
         </div>
-        <button onClick={openAdd} style={btnPrimary}><Icon name="plus" size={16} /> New Rental</button>
+        {isAdmin && <Btn onClick={openAdd}>+ New Rental</Btn>}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {["all","active","upcoming","completed"].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: "1.5px solid", fontSize: 13, fontWeight: 600, cursor: "pointer", background: filter === f ? "#1E40AF" : "#fff", color: filter === f ? "#fff" : "#64748B", borderColor: filter === f ? "#1E40AF" : "#E2E8F0" }}>
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+      {/* Search + Filter */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          style={{ ...inputStyle, maxWidth: 280, flex: "1 1 200px" }}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍  Search customer name or email..."
+        />
+        <div style={{ display: "flex", gap: 6 }}>
+          {["all","active","upcoming","completed"].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{ padding: "7px 14px", borderRadius: 20, border: "1.5px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", background: filter === f ? "#1E40AF" : "#fff", color: filter === f ? "#fff" : "#64748B", borderColor: filter === f ? "#1E40AF" : "#E2E8F0" }}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#F8FAFC" }}>
-              {["Customer","Bike","Dates","Amount","Status","Actions"].map(h => (
+              {["Customer","Bike","Dates","Status", isAdmin && "Actions"].filter(Boolean).map(h => (
                 <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 700, color: "#374151", fontSize: 12, borderBottom: "1px solid #F1F5F9" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map((r, i) => {
-              const bike = bikes.find(b => b.id === (r.bike_id || r.bikeId));
-              const name = r.customer_name || r.customerName;
-              const email = r.customer_email || r.customerEmail;
-              const start = r.start_date || r.startDate;
-              const end = r.end_date || r.endDate;
+              const bike = bikes.find(b => b.id === r.bike_id);
+              const cust = customers.find(c => c.id === r.customer_id);
               return (
-                <tr key={r.id} style={{ borderBottom: "1px solid #F8FAFC", background: i % 2 === 0 ? "#fff" : "#FAFAFE" }}>
+                <tr key={r.id} style={{ borderBottom: "1px solid #F8FAFC", background: i%2===0?"#fff":"#FAFAFE" }}>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 600, color: "#0F172A" }}>{name}</div>
-                    <div style={{ fontSize: 11, color: "#94A3B8" }}>{email}</div>
+                    <div style={{ fontWeight: 600, color: "#0F172A" }}>{cust?.name || "—"}</div>
+                    <div style={{ fontSize: 11, color: "#94A3B8" }}>{cust?.email}</div>
                   </td>
                   <td style={{ padding: "12px 16px", color: "#374151" }}>{bike?.name || "—"}</td>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ color: "#374151" }}>{start}</div>
-                    <div style={{ fontSize: 11, color: "#94A3B8" }}>to {end}</div>
+                    <div style={{ color: "#374151" }}>{r.start_date}</div>
+                    <div style={{ fontSize: 11, color: "#94A3B8" }}>to {r.end_date}</div>
                   </td>
-                  <td style={{ padding: "12px 16px", fontWeight: 700, color: "#059669" }}>${r.amount}</td>
                   <td style={{ padding: "12px 16px" }}><Badge status={r.status} /></td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => openEdit(r)} style={{ background: "#F1F5F9", border: "none", borderRadius: 6, padding: 6, cursor: "pointer", color: "#374151" }}><Icon name="edit" size={13} /></button>
-                      <button onClick={() => deleteRental(r.id)} style={{ background: "#FEE2E2", border: "none", borderRadius: 6, padding: 6, cursor: "pointer", color: "#DC2626" }}><Icon name="trash" size={13} /></button>
-                    </div>
-                  </td>
+                  {isAdmin && (
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <Btn onClick={() => openEdit(r)} variant="secondary" small>✏️</Btn>
+                        <Btn onClick={() => del(r.id)} variant="danger" small>🗑</Btn>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -509,33 +602,38 @@ function Rentals({ rentals, bikes, fetchAll, modal, setModal }) {
         </table>
       </div>
 
-      {modal === "rental" && (
+      {modal === "rental" && isAdmin && (
         <Modal title={editId ? "Edit Rental" : "New Rental"} onClose={closeModal}>
-          <Field label="Customer Name"><input style={inputStyle} value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} placeholder="Full name" /></Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Email"><input style={inputStyle} value={form.customerEmail} onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))} placeholder="email@example.com" /></Field>
-            <Field label="Phone"><input style={inputStyle} value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} placeholder="555-0000" /></Field>
-          </div>
+          <Field label="Customer">
+            <select style={selectStyle} value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
+              <option value="">Select a customer</option>
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.email}</option>)}
+            </select>
+          </Field>
           <Field label="Bike">
-            <select style={selectStyle} value={form.bikeId} onChange={e => setForm(f => ({ ...f, bikeId: e.target.value }))}>
+            <select style={selectStyle} value={form.bike_id} onChange={e => setForm(f => ({ ...f, bike_id: e.target.value }))}>
               <option value="">Select a bike</option>
-              {bikes.map(b => <option key={b.id} value={b.id}>{b.name} — ${b.daily_rate || b.dailyRate}/day</option>)}
+              {bikes.map(b => <option key={b.id} value={b.id}>{b.name} ({b.type}) — {b.status}</option>)}
             </select>
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Field label="Start Date"><input type="date" style={inputStyle} value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} /></Field>
-            <Field label="End Date"><input type="date" style={inputStyle} value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} /></Field>
-            <Field label="Amount ($)"><input type="number" style={inputStyle} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: +e.target.value }))} /></Field>
+            <Field label="Start Date"><input type="date" style={inputStyle} value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></Field>
+            <Field label="End Date"><input type="date" style={inputStyle} value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></Field>
+            <Field label="Type">
+              <select style={selectStyle} value={form.rental_type} onChange={e => setForm(f => ({ ...f, rental_type: e.target.value }))}>
+                {["hourly","daily","weekly"].map(s => <option key={s}>{s}</option>)}
+              </select>
+            </Field>
             <Field label="Status">
               <select style={selectStyle} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                 {["upcoming","active","completed"].map(s => <option key={s}>{s}</option>)}
               </select>
             </Field>
           </div>
-          <Field label="Notes"><textarea style={{ ...inputStyle, resize: "vertical", minHeight: 60 }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes..." /></Field>
+          <Field label="Notes"><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} value={form.notes||""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></Field>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <button onClick={closeModal} style={btnSecondary}>Cancel</button>
-            <button onClick={saveRental} disabled={saving} style={btnSave}>{saving ? "Saving..." : "Save Rental"}</button>
+            <Btn onClick={closeModal} variant="secondary">Cancel</Btn>
+            <button onClick={saveRental} disabled={saving} style={{ flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" }}>{saving?"Saving...":"Save Rental"}</button>
           </div>
         </Modal>
       )}
@@ -543,22 +641,23 @@ function Rentals({ rentals, bikes, fetchAll, modal, setModal }) {
   );
 }
 
-// ─── MAINTENANCE ──────────────────────────────────────────────────────────────
-function MaintenanceTab({ maintenance, bikes, fetchAll, modal, setModal }) {
-  const emptyM = { bikeId: "", type: "Inspection", description: "", scheduledDate: "", status: "scheduled", cost: 0, technicianName: "" };
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAINTENANCE
+// ═══════════════════════════════════════════════════════════════════════════════
+function MaintenanceTab({ maintenance, bikes, fetchAll, modal, setModal, isAdmin }) {
+  const emptyM = { bike_id: "", type: "Inspection", description: "", scheduled_date: "", status: "scheduled", cost: 0, technician_name: "" };
   const [form, setForm] = useState(emptyM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const openAdd = () => { setForm(emptyM); setEditId(null); setModal("maint"); };
-  const openEdit = (m) => { setForm({ ...m, bikeId: m.bike_id || m.bikeId, scheduledDate: m.scheduled_date || m.scheduledDate, technicianName: m.technician_name || m.technicianName }); setEditId(m.id); setModal("maint"); };
+  const openEdit = (m) => { setForm({ ...m }); setEditId(m.id); setModal("maint"); };
   const closeModal = () => { setModal(null); setEditId(null); };
 
   const save = async () => {
     setSaving(true);
-    const data = { bike_id: form.bikeId, type: form.type, description: form.description, scheduled_date: form.scheduledDate, status: form.status, cost: form.cost, technician_name: form.technicianName };
-    if (editId) await supabase.from("maintenance").update(data).eq("id", editId);
-    else await supabase.from("maintenance").insert({ id: generateId("m"), ...data });
+    if (editId) await supabase.from("maintenance").update(form).eq("id", editId);
+    else await supabase.from("maintenance").insert({ id: genId("m"), ...form });
     await fetchAll(); closeModal(); setSaving(false);
   };
 
@@ -570,46 +669,46 @@ function MaintenanceTab({ maintenance, bikes, fetchAll, modal, setModal }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>Maintenance</h1>
-          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{maintenance.filter(m => m.status === "scheduled").length} scheduled</p>
+          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{maintenance.filter(m=>m.status==="scheduled").length} scheduled</p>
         </div>
-        <button onClick={openAdd} style={btnPrimary}><Icon name="plus" size={16} /> Schedule Maintenance</button>
+        {isAdmin && <Btn onClick={openAdd}>+ Schedule</Btn>}
       </div>
 
       <div style={{ display: "grid", gap: 12 }}>
         {maintenance.map(m => {
-          const bike = bikes.find(b => b.id === (m.bike_id || m.bikeId));
-          const sDate = m.scheduled_date || m.scheduledDate;
-          const tech = m.technician_name || m.technicianName;
+          const bike = bikes.find(b => b.id === m.bike_id);
           return (
             <div key={m.id} style={{ background: "#fff", borderRadius: 12, padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: m.status === "completed" ? "#DCFCE7" : "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                {m.status === "completed" ? "✅" : "🔧"}
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: m.status==="completed"?"#DCFCE7":"#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                {m.status==="completed"?"✅":"🔧"}
               </div>
               <div style={{ flex: 1, minWidth: 150 }}>
-                <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>{m.type} — {bike?.name || "Unknown Bike"}</div>
+                <div style={{ fontWeight: 700, color: "#0F172A", fontSize: 15 }}>{m.type} — {bike?.name||"Unknown"}</div>
                 <div style={{ color: "#64748B", fontSize: 13, marginTop: 2 }}>{m.description}</div>
-                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>🗓 {sDate} · 👤 {tech}</div>
+                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>🗓 {m.scheduled_date} · 👤 {m.technician_name}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 800, fontSize: 18, color: "#0F172A" }}>${m.cost}</div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: "#0F172A", marginBottom: 4 }}>${m.cost}</div>
                 <Badge status={m.status} />
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                {m.status === "scheduled" && <button onClick={() => markDone(m.id)} style={{ background: "#DCFCE7", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: "#166534", fontWeight: 600, fontSize: 12 }}>✓ Done</button>}
-                <button onClick={() => openEdit(m)} style={{ background: "#F1F5F9", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: "#374151" }}><Icon name="edit" size={14} /></button>
-                <button onClick={() => del(m.id)} style={{ background: "#FEE2E2", border: "none", borderRadius: 8, padding: 8, cursor: "pointer", color: "#DC2626" }}><Icon name="trash" size={14} /></button>
-              </div>
+              {isAdmin && (
+                <div style={{ display: "flex", gap: 6 }}>
+                  {m.status==="scheduled" && <Btn onClick={() => markDone(m.id)} variant="success" small>✓ Done</Btn>}
+                  <Btn onClick={() => openEdit(m)} variant="secondary" small>✏️</Btn>
+                  <Btn onClick={() => del(m.id)} variant="danger" small>🗑</Btn>
+                </div>
+              )}
             </div>
           );
         })}
-        {maintenance.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#94A3B8" }}>No maintenance records yet</div>}
+        {maintenance.length === 0 && <div style={{ textAlign:"center", padding:40, color:"#94A3B8" }}>No records yet</div>}
       </div>
 
-      {modal === "maint" && (
-        <Modal title={editId ? "Edit Maintenance" : "Schedule Maintenance"} onClose={closeModal}>
+      {modal === "maint" && isAdmin && (
+        <Modal title={editId ? "Edit" : "Schedule Maintenance"} onClose={closeModal}>
           <Field label="Bike">
-            <select style={selectStyle} value={form.bikeId} onChange={e => setForm(f => ({ ...f, bikeId: e.target.value }))}>
-              <option value="">Select a bike</option>
+            <select style={selectStyle} value={form.bike_id} onChange={e => setForm(f => ({ ...f, bike_id: e.target.value }))}>
+              <option value="">Select bike</option>
               {bikes.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </Field>
@@ -624,14 +723,14 @@ function MaintenanceTab({ maintenance, bikes, fetchAll, modal, setModal }) {
                 {["scheduled","completed"].map(s => <option key={s}>{s}</option>)}
               </select>
             </Field>
-            <Field label="Scheduled Date"><input type="date" style={inputStyle} value={form.scheduledDate} onChange={e => setForm(f => ({ ...f, scheduledDate: e.target.value }))} /></Field>
+            <Field label="Date"><input type="date" style={inputStyle} value={form.scheduled_date} onChange={e => setForm(f => ({ ...f, scheduled_date: e.target.value }))} /></Field>
             <Field label="Cost ($)"><input type="number" style={inputStyle} value={form.cost} onChange={e => setForm(f => ({ ...f, cost: +e.target.value }))} /></Field>
           </div>
-          <Field label="Technician Name"><input style={inputStyle} value={form.technicianName} onChange={e => setForm(f => ({ ...f, technicianName: e.target.value }))} placeholder="e.g. Mike T." /></Field>
-          <Field label="Description"><textarea style={{ ...inputStyle, resize: "vertical", minHeight: 70 }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe the work needed..." /></Field>
+          <Field label="Technician"><input style={inputStyle} value={form.technician_name} onChange={e => setForm(f => ({ ...f, technician_name: e.target.value }))} placeholder="Mike T." /></Field>
+          <Field label="Description"><textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></Field>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <button onClick={closeModal} style={btnSecondary}>Cancel</button>
-            <button onClick={save} disabled={saving} style={btnSave}>{saving ? "Saving..." : "Save"}</button>
+            <Btn onClick={closeModal} variant="secondary">Cancel</Btn>
+            <button onClick={save} disabled={saving} style={{ flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" }}>{saving?"Saving...":"Save"}</button>
           </div>
         </Modal>
       )}
@@ -639,55 +738,49 @@ function MaintenanceTab({ maintenance, bikes, fetchAll, modal, setModal }) {
   );
 }
 
-// ─── CALENDAR ─────────────────────────────────────────────────────────────────
-function CalendarView({ rentals, bikes }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════════
+function CalendarView({ rentals, bikes, customers }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-
   const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
 
-  const getBookingsForDay = (day) => {
-    const date = `${year}-${String(month + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-    return rentals.filter(r => {
-      const start = r.start_date || r.startDate;
-      const end = r.end_date || r.endDate;
-      return start <= date && end >= date;
-    });
+  const getDay = (day) => {
+    const date = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    return rentals.filter(r => r.start_date <= date && r.end_date >= date);
   };
 
-  const monthCount = rentals.filter(r => { const d = new Date(r.start_date || r.startDate); return d.getFullYear() === year && d.getMonth() === month; }).length;
-  const yearCount = rentals.filter(r => new Date(r.start_date || r.startDate).getFullYear() === year).length;
-  const monthRevenue = rentals.filter(r => { const d = new Date(r.start_date || r.startDate); return d.getFullYear() === year && d.getMonth() === month && r.status === "completed"; }).reduce((s, r) => s + Number(r.amount), 0);
+  const monthCount = rentals.filter(r => { const d = new Date(r.start_date); return d.getFullYear()===year && d.getMonth()===month; }).length;
+  const yearCount  = rentals.filter(r => new Date(r.start_date).getFullYear()===year).length;
 
   const days = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let d = 1; d <= daysInMonth; d++) days.push(d);
+  for (let i=0;i<firstDay;i++) days.push(null);
+  for (let d=1;d<=daysInMonth;d++) days.push(d);
 
   return (
     <div style={{ padding: 32 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>Calendar</h1>
-          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>Rental schedule overview</p>
+          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>Rental schedule</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={() => { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); }} style={{ background: "#F1F5F9", border: "none", borderRadius: 8, padding: 8, cursor: "pointer" }}><Icon name="chevronLeft" size={16} /></button>
-          <span style={{ fontWeight: 700, fontSize: 15, color: "#0F172A", minWidth: 140, textAlign: "center" }}>{monthNames[month]} {year}</span>
-          <button onClick={() => { if (month === 11) { setMonth(0); setYear(y => y+1); } else setMonth(m => m+1); }} style={{ background: "#F1F5F9", border: "none", borderRadius: 8, padding: 8, cursor: "pointer" }}><Icon name="chevronRight" size={16} /></button>
+          <Btn onClick={() => { month===0?setMonth(11)&&setYear(y=>y-1):setMonth(m=>m-1); if(month===0){setMonth(11);setYear(y=>y-1);} else setMonth(m=>m-1); }} variant="secondary" small>‹</Btn>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#0F172A", minWidth: 150, textAlign: "center" }}>{monthNames[month]} {year}</span>
+          <Btn onClick={() => { if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); }} variant="secondary" small>›</Btn>
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         {[
-          { label: `Bookings in ${monthNames[month]}`, value: monthCount, icon: "📅", color: "#3B82F6" },
-          { label: `Bookings in ${year}`, value: yearCount, icon: "📆", color: "#8B5CF6" },
-          { label: "Revenue this month", value: `$${monthRevenue}`, icon: "💵", color: "#22C55E" },
+          { label: `Bookings in ${monthNames[month]}`, value: monthCount, color: "#3B82F6" },
+          { label: `Bookings in ${year}`, value: yearCount, color: "#8B5CF6" },
         ].map(s => (
-          <div key={s.label} style={{ flex: 1, background: "#fff", borderRadius: 12, padding: "14px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: `4px solid ${s.color}` }}>
-            <div style={{ fontSize: 20 }}>{s.icon}</div>
+          <div key={s.label} style={{ background: "#fff", borderRadius: 12, padding: "14px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: `4px solid ${s.color}` }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#0F172A" }}>{s.value}</div>
             <div style={{ fontSize: 12, color: "#94A3B8" }}>{s.label}</div>
           </div>
@@ -702,22 +795,23 @@ function CalendarView({ rentals, bikes }) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, background: "#F1F5F9" }}>
           {days.map((day, i) => {
-            const bookings = day ? getBookingsForDay(day) : [];
-            const isToday = day && year === now.getFullYear() && month === now.getMonth() && day === now.getDate();
+            const bookings = day ? getDay(day) : [];
+            const isToday = day && year===now.getFullYear() && month===now.getMonth() && day===now.getDate();
             return (
-              <div key={i} style={{ background: "#fff", minHeight: 82, padding: "6px 8px" }}>
+              <div key={i} style={{ background: "#fff", minHeight: 85, padding: "6px 8px" }}>
                 {day && (
                   <>
-                    <div style={{ fontSize: 13, fontWeight: isToday ? 800 : 500, color: isToday ? "#fff" : "#374151", width: 24, height: 24, borderRadius: "50%", background: isToday ? "#1E40AF" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>{day}</div>
-                    {bookings.slice(0, 2).map(r => {
-                      const bike = bikes.find(b => b.id === (r.bike_id || r.bikeId));
+                    <div style={{ fontSize: 13, fontWeight: isToday?800:500, color: isToday?"#fff":"#374151", width: 24, height: 24, borderRadius: "50%", background: isToday?"#1E40AF":"transparent", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>{day}</div>
+                    {bookings.slice(0,2).map(r => {
+                      const bike = bikes.find(b => b.id === r.bike_id);
+                      const cust = customers.find(c => c.id === r.customer_id);
                       return (
-                        <div key={r.id} style={{ fontSize: 10, padding: "2px 5px", borderRadius: 4, marginBottom: 2, fontWeight: 600, background: (bike?.color || "#3B82F6") + "22", color: bike?.color || "#1E40AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {bike?.name || "Bike"}
+                        <div key={r.id} title={`${cust?.name||""} — ${bike?.name||""}`} style={{ fontSize: 10, padding: "2px 5px", borderRadius: 4, marginBottom: 2, fontWeight: 600, background: (bike?.color||"#3B82F6")+"22", color: bike?.color||"#1E40AF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {cust?.name?.split(" ")[0] || bike?.name || "—"}
                         </div>
                       );
                     })}
-                    {bookings.length > 2 && <div style={{ fontSize: 10, color: "#94A3B8" }}>+{bookings.length - 2} more</div>}
+                    {bookings.length>2 && <div style={{ fontSize: 10, color: "#94A3B8" }}>+{bookings.length-2}</div>}
                   </>
                 )}
               </div>
@@ -726,14 +820,181 @@ function CalendarView({ rentals, bikes }) {
         </div>
       </div>
 
-      <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap" }}>
         {bikes.map(b => (
-          <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151" }}>
+          <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#374151" }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: b.color, display: "inline-block" }} />
             {b.name}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CUSTOMERS TAB (includes app_users / admins management for admins)
+// ═══════════════════════════════════════════════════════════════════════════════
+function CustomersTab({ customers, rentals, appUsers, fetchAll, modal, setModal, isAdmin }) {
+  const [custModal, setCustModal] = useState(false);
+  const [userModal, setUserModal] = useState(false);
+  const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", instagram: "" });
+  const [userForm, setUserForm] = useState({ name: "", email: "", password_hash: "", role: "readonly" });
+  const [saving, setSaving] = useState(false);
+  const [subTab, setSubTab] = useState("customers");
+
+  const custWithCount = useMemo(() => {
+    return customers.map(c => ({
+      ...c,
+      rentalCount: rentals.filter(r => r.customer_id === c.id).length,
+    })).sort((a, b) => b.rentalCount - a.rentalCount);
+  }, [customers, rentals]);
+
+  const saveCustomer = async () => {
+    setSaving(true);
+    const existing = customers.find(c => c.email?.toLowerCase() === custForm.email?.toLowerCase());
+    if (existing) { alert("A customer with this email already exists."); setSaving(false); return; }
+    await supabase.from("customers").insert({ id: genId("cu"), ...custForm });
+    await fetchAll(); setCustModal(false); setSaving(false);
+    setCustForm({ name: "", email: "", phone: "", instagram: "" });
+  };
+
+  const delCustomer = async (id) => { await supabase.from("customers").delete().eq("id", id); await fetchAll(); };
+
+  const saveUser = async () => {
+    setSaving(true);
+    await supabase.from("app_users").insert({ name: userForm.name, email: userForm.email, password_hash: `hash:${userForm.password_hash}`, role: userForm.role });
+    await fetchAll(); setUserModal(false); setSaving(false);
+    setUserForm({ name: "", email: "", password_hash: "", role: "readonly" });
+  };
+
+  const delUser = async (id) => { await supabase.from("app_users").delete().eq("id", id); await fetchAll(); };
+
+  return (
+    <div style={{ padding: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0F172A" }}>Users & Customers</h1>
+          <p style={{ margin: "2px 0 0", color: "#64748B", fontSize: 13 }}>{customers.length} customers · {appUsers.length} system users</p>
+        </div>
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 8 }}>
+            {subTab === "customers" && <Btn onClick={() => setCustModal(true)}>+ Add Customer</Btn>}
+            {subTab === "admins" && <Btn onClick={() => setUserModal(true)}>+ Add User</Btn>}
+          </div>
+        )}
+      </div>
+
+      {/* Sub tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+        {[{ id:"customers",label:"Customers"}, {id:"admins",label:"System Users"}].map(t => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} style={{ padding: "7px 18px", borderRadius: 20, border: "1.5px solid", fontSize: 13, fontWeight: 600, cursor: "pointer", background: subTab===t.id?"#1E40AF":"#fff", color: subTab===t.id?"#fff":"#64748B", borderColor: subTab===t.id?"#1E40AF":"#E2E8F0" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Customers Table */}
+      {subTab === "customers" && (
+        <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#F8FAFC" }}>
+                {["Name","Email","Phone","Instagram","Rentals", isAdmin&&"Actions"].filter(Boolean).map(h => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 700, color: "#374151", fontSize: 12, borderBottom: "1px solid #F1F5F9" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {custWithCount.map((c, i) => (
+                <tr key={c.id} style={{ borderBottom: "1px solid #F8FAFC", background: i%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding: "12px 16px", fontWeight: 600, color: "#0F172A" }}>{c.name}</td>
+                  <td style={{ padding: "12px 16px", color: "#374151" }}>{c.email||"—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#374151" }}>{c.phone||"—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#3B82F6" }}>{c.instagram||"—"}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{ background: "#EFF6FF", color: "#1E40AF", fontWeight: 700, fontSize: 13, padding: "3px 12px", borderRadius: 20 }}>{c.rentalCount}</span>
+                  </td>
+                  {isAdmin && (
+                    <td style={{ padding: "12px 16px" }}>
+                      <Btn onClick={() => delCustomer(c.id)} variant="danger" small>🗑</Btn>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {custWithCount.length === 0 && <tr><td colSpan={6} style={{ padding: 32, textAlign: "center", color: "#94A3B8" }}>No customers yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* System Users Table */}
+      {subTab === "admins" && (
+        <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#F8FAFC" }}>
+                {["Name","Email","Role","Created", isAdmin&&"Actions"].filter(Boolean).map(h => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontWeight: 700, color: "#374151", fontSize: 12, borderBottom: "1px solid #F1F5F9" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {appUsers.map((u, i) => (
+                <tr key={u.id} style={{ borderBottom: "1px solid #F8FAFC", background: i%2===0?"#fff":"#FAFAFE" }}>
+                  <td style={{ padding: "12px 16px", fontWeight: 600, color: "#0F172A" }}>{u.name}</td>
+                  <td style={{ padding: "12px 16px", color: "#374151" }}>{u.email}</td>
+                  <td style={{ padding: "12px 16px" }}><Badge status={u.role==="admin"?"active":"scheduled"} /></td>
+                  <td style={{ padding: "12px 16px", color: "#94A3B8", fontSize: 12 }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                  {isAdmin && (
+                    <td style={{ padding: "12px 16px" }}>
+                      <Btn onClick={() => delUser(u.id)} variant="danger" small>🗑</Btn>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {custModal && isAdmin && (
+        <Modal title="Add Customer" onClose={() => setCustModal(false)}>
+          <Field label="Full Name"><input style={inputStyle} value={custForm.name} onChange={e => setCustForm(f=>({...f,name:e.target.value}))} placeholder="Jane Doe" /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Email"><input style={inputStyle} value={custForm.email} onChange={e => setCustForm(f=>({...f,email:e.target.value}))} placeholder="jane@email.com" /></Field>
+            <Field label="Phone"><input style={inputStyle} value={custForm.phone} onChange={e => setCustForm(f=>({...f,phone:e.target.value}))} placeholder="555-0000" /></Field>
+          </div>
+          <Field label="Instagram"><input style={inputStyle} value={custForm.instagram} onChange={e => setCustForm(f=>({...f,instagram:e.target.value}))} placeholder="@janedoe" /></Field>
+          <div style={{ background: "#EFF6FF", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#1E40AF", marginBottom: 16 }}>
+            ℹ️ Each customer is registered once. When they book again, select them from the dropdown in the rental form.
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn onClick={() => setCustModal(false)} variant="secondary">Cancel</Btn>
+            <button onClick={saveCustomer} disabled={saving} style={{ flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" }}>{saving?"Saving...":"Add Customer"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add System User Modal */}
+      {userModal && isAdmin && (
+        <Modal title="Add System User" onClose={() => setUserModal(false)}>
+          <Field label="Full Name"><input style={inputStyle} value={userForm.name} onChange={e => setUserForm(f=>({...f,name:e.target.value}))} placeholder="Jane Admin" /></Field>
+          <Field label="Email"><input style={inputStyle} value={userForm.email} onChange={e => setUserForm(f=>({...f,email:e.target.value}))} placeholder="jane@bikerent.com" /></Field>
+          <Field label="Password"><input type="password" style={inputStyle} value={userForm.password_hash} onChange={e => setUserForm(f=>({...f,password_hash:e.target.value}))} placeholder="Choose a password" /></Field>
+          <Field label="Role">
+            <select style={selectStyle} value={userForm.role} onChange={e => setUserForm(f=>({...f,role:e.target.value}))}>
+              <option value="readonly">Read Only — can view everything, no edits</option>
+              <option value="admin">Admin — full access + can add users</option>
+            </select>
+          </Field>
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <Btn onClick={() => setUserModal(false)} variant="secondary">Cancel</Btn>
+            <button onClick={saveUser} disabled={saving} style={{ flex: 2, padding: "10px", background: "#1E40AF", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", color: "#fff" }}>{saving?"Saving...":"Add User"}</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
